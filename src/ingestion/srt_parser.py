@@ -488,3 +488,115 @@ def extract_signals(
     signals.negotiation_rounds = len(segments.negotiation)
 
     return signals
+
+
+# ---------------------------------------------------------------------------
+# Public API: Episode / Batch Parsing
+# ---------------------------------------------------------------------------
+
+_EPISODE_CODE_RE = re.compile(r"S(\d{2})E(\d{2})")
+
+
+def _extract_episode_code(filename: str) -> str:
+    """Extract SxxExx from filename like 'Shark.Tank.S01E01_with_speakers.srt'."""
+    m = _EPISODE_CODE_RE.search(filename)
+    return m.group(0) if m else filename
+
+
+def _extract_entrepreneur_name(pitch_blocks: list[SubtitleBlock], roles: dict[str, str]) -> str:
+    """Extract entrepreneur name from 'My name is ...' or boundary intro line."""
+    for block in pitch_blocks:
+        # Check "my name is X" pattern
+        m = re.search(r"(?:my name is|i'?m)\s+([A-Z][a-z]+ [A-Z][a-z]+)", block.text)
+        if m and roles.get(block.speaker) in ("entrepreneur", "narrator", ""):
+            return m.group(1)
+    # Fallback: check boundary line "First into the tank is X"
+    for block in pitch_blocks:
+        m = re.search(
+            r"(?:into the (?:tank|shark tank)|next up) (?:is|are)\s+(.+?)(?:,|who|\.|$)",
+            block.text, re.IGNORECASE,
+        )
+        if m:
+            return m.group(1).strip()
+    return "Unknown"
+
+
+def parse_episode(path: str | Path) -> list[ParsedPitch]:
+    """Full pipeline: parse SRT file -> split pitches -> classify -> segment -> signals.
+
+    Args:
+        path: Path to an SRT file.
+
+    Returns:
+        List of ParsedPitch objects, one per pitch in the episode.
+    """
+    path = Path(path)
+    all_blocks = parse_srt_file(path)
+    episode_code = _extract_episode_code(path.name)
+    pitch_block_groups = split_into_pitches(all_blocks)
+
+    results: list[ParsedPitch] = []
+    for i, pitch_blocks in enumerate(pitch_block_groups):
+        roles, confidences = classify_speakers(pitch_blocks, all_blocks)
+        segments = segment_pitch(pitch_blocks, roles)
+        signals = extract_signals(pitch_blocks, segments, roles)
+        name = _extract_entrepreneur_name(pitch_blocks, roles)
+
+        results.append(ParsedPitch(
+            episode=episode_code,
+            pitch_index=i,
+            entrepreneur_name=name,
+            segments=segments,
+            signals=signals,
+            speaker_map=roles,
+            confidence_scores=confidences,
+            raw_blocks=pitch_blocks,
+        ))
+
+    return results
+
+
+def parse_all_episodes(srt_dir: str | Path) -> list[ParsedPitch]:
+    """Parse all SRT files in a directory tree.
+
+    Searches for *.srt files recursively. Returns a flat list
+    of all pitches across all episodes, sorted by episode then pitch_index.
+    """
+    srt_dir = Path(srt_dir)
+    srt_files = sorted(srt_dir.rglob("*.srt"))
+
+    if not srt_files:
+        raise FileNotFoundError(f"No .srt files found in {srt_dir}")
+
+    all_pitches: list[ParsedPitch] = []
+    for srt_file in srt_files:
+        try:
+            pitches = parse_episode(srt_file)
+            all_pitches.extend(pitches)
+        except Exception as e:
+            print(f"Warning: Failed to parse {srt_file.name}: {e}")
+
+    return all_pitches
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    if len(sys.argv) < 2:
+        print("Usage: python srt_parser.py <path-to-srt-or-directory>")
+        sys.exit(1)
+
+    target = Path(sys.argv[1])
+
+    if target.is_file():
+        pitches = parse_episode(target)
+        output = [p.to_dict() for p in pitches]
+        print(json.dumps(output, indent=2))
+    elif target.is_dir():
+        pitches = parse_all_episodes(target)
+        output = [p.to_dict() for p in pitches]
+        print(json.dumps(output, indent=2))
+    else:
+        print(f"Error: {target} is not a valid file or directory")
+        sys.exit(1)

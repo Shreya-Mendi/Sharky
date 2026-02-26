@@ -8,6 +8,9 @@ from src.ingestion.srt_parser import (
     classify_speakers,
     segment_pitch,
     extract_signals,
+    parse_episode,
+    parse_all_episodes,
+    ParsedPitch,
 )
 
 
@@ -258,3 +261,50 @@ class TestExtractSignals:
         segments = segment_pitch(pitches[1], roles)
         signals = extract_signals(pitches[1], segments, roles)
         assert signals.market_size_claim == 50_000_000_000.0
+
+
+class TestParseEpisode:
+    """Test full episode parsing pipeline."""
+
+    def test_returns_parsed_pitches(self, sample_srt_file):
+        pitches = parse_episode(sample_srt_file)
+        assert len(pitches) == 2
+        assert all(isinstance(p, ParsedPitch) for p in pitches)
+
+    def test_episode_code_extracted(self, sample_srt_file):
+        pitches = parse_episode(sample_srt_file)
+        assert pitches[0].episode == "S01E01"
+
+    def test_entrepreneur_name_extracted(self, sample_srt_file):
+        pitches = parse_episode(sample_srt_file)
+        assert "Jane Smith" in pitches[0].entrepreneur_name
+
+    def test_pitch_index_sequential(self, sample_srt_file):
+        pitches = parse_episode(sample_srt_file)
+        assert pitches[0].pitch_index == 0
+        assert pitches[1].pitch_index == 1
+
+    def test_signals_populated(self, sample_srt_file):
+        pitches = parse_episode(sample_srt_file)
+        assert pitches[0].signals.revenue_mentioned > 0
+        assert pitches[0].signals.objection_count >= 2
+
+    def test_to_dict_serializable(self, sample_srt_file):
+        import json
+        pitches = parse_episode(sample_srt_file)
+        # Should not raise
+        json.dumps(pitches[0].to_dict())
+
+
+class TestParseAllEpisodes:
+    """Test batch episode parsing."""
+
+    def test_parses_multiple_files(self, sample_srt_dir):
+        pitches = parse_all_episodes(sample_srt_dir)
+        # 2 files * 2 pitches each = 4 total
+        assert len(pitches) == 4
+
+    def test_empty_directory(self, tmp_path):
+        import pytest
+        with pytest.raises(FileNotFoundError):
+            parse_all_episodes(tmp_path)
