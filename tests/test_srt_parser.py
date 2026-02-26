@@ -4,6 +4,10 @@ from src.ingestion.srt_parser import (
     SubtitleBlock,
     parse_srt,
     parse_srt_file,
+    split_into_pitches,
+    classify_speakers,
+    segment_pitch,
+    extract_signals,
 )
 
 
@@ -83,3 +87,174 @@ class TestParseSrtFile:
         import pytest
         with pytest.raises(FileNotFoundError):
             parse_srt_file(tmp_path / "nonexistent.srt")
+
+
+class TestSplitIntoPitches:
+    def test_two_pitches_bracket_format(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        assert len(pitches) == 2
+
+    def test_two_pitches_colon_format(self, sample_srt_colon):
+        blocks = parse_srt(sample_srt_colon)
+        pitches = split_into_pitches(blocks)
+        assert len(pitches) == 2
+
+    def test_first_pitch_contains_jane(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        first_pitch_text = " ".join(b.text for b in pitches[0])
+        assert "Jane Smith" in first_pitch_text
+
+    def test_second_pitch_contains_bob(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        second_pitch_text = " ".join(b.text for b in pitches[1])
+        assert "Bob Lee" in second_pitch_text
+
+    def test_intro_blocks_excluded_from_pitches(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        first_block = pitches[0][0]
+        assert "First into the tank" in first_block.text or "Jane" in first_block.text
+
+    def test_single_pitch_no_boundary(self):
+        srt = """1
+00:00:00,000 --> 00:00:05,000
+[Speaker_1] Hello, my name is Alice. I'm asking for $100,000 for 10%.
+
+2
+00:00:05,000 --> 00:00:10,000
+[Speaker_2] What are your sales?
+"""
+        blocks = parse_srt(srt)
+        pitches = split_into_pitches(blocks)
+        assert len(pitches) == 1
+
+    def test_empty_input(self):
+        pitches = split_into_pitches([])
+        assert pitches == []
+
+
+class TestClassifySpeakers:
+    def test_narrator_identified(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, confidences = classify_speakers(pitches[0], blocks)
+        assert roles["Speaker_1"] == "narrator"
+
+    def test_entrepreneur_identified(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, confidences = classify_speakers(pitches[0], blocks)
+        assert roles["Speaker_2"] == "entrepreneur"
+
+    def test_sharks_identified(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, confidences = classify_speakers(pitches[0], blocks)
+        shark_speakers = [s for s, r in roles.items() if r == "shark"]
+        assert len(shark_speakers) >= 2
+
+    def test_confidence_scores_between_0_and_1(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, confidences = classify_speakers(pitches[0], blocks)
+        for speaker, score in confidences.items():
+            assert 0.0 <= score <= 1.0
+
+    def test_second_pitch_different_entrepreneur(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles1, _ = classify_speakers(pitches[0], blocks)
+        roles2, _ = classify_speakers(pitches[1], blocks)
+        entrepreneurs1 = [s for s, r in roles1.items() if r == "entrepreneur"]
+        entrepreneurs2 = [s for s, r in roles2.items() if r == "entrepreneur"]
+        assert entrepreneurs1 != entrepreneurs2
+
+
+class TestSegmentPitch:
+    def test_founder_pitch_captured(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        assert len(segments.founder_pitch) > 0
+        texts = [b.text for b in segments.founder_pitch]
+        assert any("asking for" in t for t in texts)
+
+    def test_product_demo_captured(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        demo_texts = [b.text for b in segments.product_demo]
+        assert any("show" in t.lower() for t in demo_texts)
+
+    def test_objections_captured(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        assert len(segments.objections) >= 2
+        obj_texts = [b.text for b in segments.objections]
+        assert any("I'm out" in t for t in obj_texts)
+
+    def test_negotiation_captured(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        assert len(segments.negotiation) >= 1
+
+    def test_shark_questions_captured(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        assert len(segments.shark_questions) >= 1
+        q_texts = [b.text for b in segments.shark_questions]
+        assert any("?" in t for t in q_texts)
+
+
+class TestExtractSignals:
+    def test_revenue_extracted(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        signals = extract_signals(pitches[0], segments, roles)
+        assert signals.revenue_mentioned == 500_000.0
+
+    def test_objection_count(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        signals = extract_signals(pitches[0], segments, roles)
+        assert signals.objection_count >= 2
+
+    def test_negotiation_rounds(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        signals = extract_signals(pitches[0], segments, roles)
+        assert signals.negotiation_rounds >= 1
+
+    def test_founder_confidence_is_float(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[0], blocks)
+        segments = segment_pitch(pitches[0], roles)
+        signals = extract_signals(pitches[0], segments, roles)
+        assert isinstance(signals.founder_confidence, float)
+        assert -1.0 <= signals.founder_confidence <= 1.0
+
+    def test_market_size_from_second_pitch(self, sample_srt_bracket):
+        blocks = parse_srt(sample_srt_bracket)
+        pitches = split_into_pitches(blocks)
+        roles, _ = classify_speakers(pitches[1], blocks)
+        segments = segment_pitch(pitches[1], roles)
+        signals = extract_signals(pitches[1], segments, roles)
+        assert signals.market_size_claim == 50_000_000_000.0
