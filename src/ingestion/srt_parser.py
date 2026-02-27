@@ -9,10 +9,13 @@ Pipeline: parse SRT -> split into pitches -> classify roles -> segment -> extrac
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -573,9 +576,10 @@ def parse_all_episodes(srt_dir: str | Path) -> list[ParsedPitch]:
         try:
             pitches = parse_episode(srt_file)
             all_pitches.extend(pitches)
-        except Exception as e:
-            print(f"Warning: Failed to parse {srt_file.name}: {e}")
+        except (ValueError, UnicodeDecodeError, IndexError) as e:
+            logger.warning("Failed to parse %s: %s", srt_file.name, e)
 
+    all_pitches.sort(key=lambda p: (p.episode, p.pitch_index))
     return all_pitches
 
 
