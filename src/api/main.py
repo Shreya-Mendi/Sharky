@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json as json_module
+
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from src.api.schemas import (
     PredictRequest,
@@ -13,6 +17,7 @@ from src.api.schemas import (
     CompsRequest,
     CompsResponse,
 )
+from src.data.cache import get_all_pitches, get_episodes, get_episode, get_stats
 from src.models.deal_predictor import (
     NUMERIC_FEATURES,
     DealPrediction,
@@ -23,6 +28,14 @@ app = FastAPI(
     title="Shark Tank AI Engine",
     description="Analyze Shark Tank pitches, predict deal outcomes, find comparable deals.",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Global model (loaded at startup or first request)
@@ -115,3 +128,52 @@ def find_comps(request: CompsRequest):
         return CompsResponse(matches=context)
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Comps search unavailable: {e}")
+
+
+@app.get("/data/episodes")
+def list_episodes():
+    """List all parsed episodes with pitch counts."""
+    return get_episodes()
+
+
+@app.get("/data/episodes/{code}")
+def get_episode_detail(code: str):
+    """Get a single episode with all pitch data."""
+    episode = get_episode(code)
+    if not episode:
+        raise HTTPException(status_code=404, detail=f"Episode {code} not found")
+    return episode
+
+
+@app.get("/data/stats")
+def stats():
+    """Aggregate statistics for the dashboard."""
+    return get_stats()
+
+
+@app.get("/data/pitches")
+def list_pitches(limit: int = 50, offset: int = 0):
+    """List all pitches with pagination."""
+    pitches = get_all_pitches()
+    return {"total": len(pitches), "pitches": pitches[offset:offset + limit]}
+
+
+@app.get("/analyze/stream")
+async def analyze_stream_endpoint(query: str, top_k: int = 5):
+    """SSE streaming analysis endpoint for SharkBot."""
+    def event_generator():
+        try:
+            from src.rag.retrieval_chain import analyze_stream
+            for chunk in analyze_stream(query, top_k=top_k):
+                event_data = json_module.dumps(chunk)
+                yield f"data: {event_data}\n\n"
+            yield "data: {\"type\": \"done\"}\n\n"
+        except Exception as e:
+            error_data = json_module.dumps({"type": "error", "data": str(e)})
+            yield f"data: {error_data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )

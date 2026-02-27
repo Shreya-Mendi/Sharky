@@ -35,3 +35,24 @@ class TestPredictEndpoint:
     def test_predict_validates_input(self, client):
         response = client.post("/predict", json={})
         assert response.status_code == 422
+
+
+class TestDataEndpoints:
+    def test_stats(self, client):
+        response = client.get("/data/stats")
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_pitches" in data
+        assert "total_episodes" in data
+
+    def test_episodes_list(self, client):
+        response = client.get("/data/episodes")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    def test_pitches_paginated(self, client):
+        response = client.get("/data/pitches?limit=5&offset=0")
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "pitches" in data

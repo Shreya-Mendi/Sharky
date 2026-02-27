@@ -159,3 +159,37 @@ def analyze(
     ]
 
     return AnalysisResult(answer=answer, sources=sources, query=query)
+
+
+def analyze_stream(
+    query: str,
+    top_k: int = 5,
+    filters: Optional[dict] = None,
+):
+    """Streaming RAG pipeline. Yields chunks of Claude's response."""
+    import anthropic
+
+    context_docs = retrieve_context(query, top_k=top_k, filters=filters)
+    prompt = build_analysis_prompt(query, context_docs)
+
+    client = anthropic.Anthropic()
+
+    sources = [
+        {
+            "episode": doc.get("episode", ""),
+            "company_name": doc.get("company_name", ""),
+            "segment_type": doc.get("segment_type", ""),
+            "text_snippet": doc.get("text", "")[:200],
+        }
+        for doc in context_docs
+    ]
+
+    yield {"type": "sources", "data": sources}
+
+    with client.messages.stream(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for text in stream.text_stream:
+            yield {"type": "text", "data": text}

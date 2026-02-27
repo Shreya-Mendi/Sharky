@@ -39,3 +39,26 @@ class CompsRequest(BaseModel):
 
 class CompsResponse(BaseModel):
     matches: list[dict] = []
+
+
+class EpisodeSummary(BaseModel):
+    episode: str
+    pitch_count: int
+    deal_count: int
+
+
+class EpisodeDetail(BaseModel):
+    episode: str
+    pitch_count: int
+    deal_count: int
+    pitches: list[dict]
+
+
+class StatsResponse(BaseModel):
+    total_pitches: int
+    total_episodes: int
+    total_seasons: int
+    avg_revenue_mentioned: float
+    avg_objection_count: float
+    avg_founder_confidence: float
+    seasons: list[dict]
