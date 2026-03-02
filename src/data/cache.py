@@ -103,3 +103,104 @@ def get_stats() -> dict:
         "seasons": seasons,
     }
     return _cached_stats
+
+
+# Industry keyword mapping for classifying pitches from SRT data
+INDUSTRY_KEYWORDS = {
+    "Food & Beverage": ["food", "restaurant", "cook", "kitchen", "recipe", "drink", "beverage", "snack", "sauce", "spice", "meal", "eat", "chef", "bakery", "candy", "chocolate"],
+    "Technology": ["app", "software", "tech", "digital", "online", "platform", "website", "internet", "computer", "ai", "data", "cloud", "saas"],
+    "Health & Wellness": ["health", "medical", "wellness", "vitamin", "supplement", "therapy", "doctor", "patient", "organic", "natural", "cbd", "hemp"],
+    "Fashion & Beauty": ["fashion", "clothing", "beauty", "cosmetic", "makeup", "skin", "hair", "jewelry", "accessories", "dress", "wear", "style"],
+    "Home & Garden": ["home", "house", "garden", "furniture", "decor", "clean", "storage", "organize"],
+    "Children & Education": ["kid", "child", "baby", "toy", "education", "learn", "school", "parent", "family"],
+    "Fitness & Sports": ["fitness", "gym", "workout", "exercise", "sport", "athletic", "training", "yoga"],
+    "Entertainment": ["entertainment", "game", "music", "movie", "party", "fun", "play", "media"],
+    "Automotive": ["car", "auto", "vehicle", "motor", "drive", "truck"],
+    "Pet Products": ["pet", "dog", "cat", "animal"],
+}
+
+
+def classify_industry(pitch: dict) -> str:
+    """Classify a pitch into an industry based on segment text."""
+    text_parts = []
+    for seg_name in ["founder_pitch", "product_demo"]:
+        seg = pitch.get("segments", {}).get(seg_name, [])
+        if isinstance(seg, list):
+            text_parts.extend(seg)
+    text = " ".join(text_parts).lower()
+
+    scores: dict[str, int] = {}
+    for industry, keywords in INDUSTRY_KEYWORDS.items():
+        scores[industry] = sum(1 for kw in keywords if kw in text)
+
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else "Other"
+
+
+def get_industries() -> list[dict]:
+    """Get industry-level aggregate stats."""
+    pitches = get_all_pitches()
+    industry_data: dict[str, list[dict]] = {}
+    for pitch in pitches:
+        ind = classify_industry(pitch)
+        industry_data.setdefault(ind, []).append(pitch)
+
+    result = []
+    for industry, ind_pitches in sorted(industry_data.items()):
+        revenues = [p["signals"]["revenue_mentioned"] for p in ind_pitches if p["signals"]["revenue_mentioned"] > 0]
+        has_negotiation = [p for p in ind_pitches if p["signals"]["negotiation_rounds"] > 0]
+        result.append({
+            "industry": industry,
+            "deal_count": len(ind_pitches),
+            "success_rate": round(len(has_negotiation) / len(ind_pitches), 4) if ind_pitches else 0,
+            "avg_ask": round(sum(revenues) / len(revenues), 2) if revenues else 0,
+            "avg_revenue": round(sum(revenues) / len(revenues), 2) if revenues else 0,
+            "avg_equity": 0,
+            "avg_valuation": 0,
+            "pitch_count": len(ind_pitches),
+        })
+    return result
+
+
+def get_deals(
+    limit: int = 50,
+    offset: int = 0,
+    industry: str | None = None,
+    has_deal: bool | None = None,
+    search: str | None = None,
+    min_revenue: float | None = None,
+    max_revenue: float | None = None,
+) -> dict:
+    """Get filterable, paginated deal list."""
+    pitches = get_all_pitches()
+
+    enriched = []
+    for p in pitches:
+        deal = {
+            "episode": p["episode"],
+            "company_name": p.get("entrepreneur_name", "Unknown"),
+            "industry": classify_industry(p),
+            "season": p["episode"][:3] if p.get("episode") else "",
+            "revenue": p["signals"]["revenue_mentioned"],
+            "objection_count": p["signals"]["objection_count"],
+            "negotiation_rounds": p["signals"]["negotiation_rounds"],
+            "founder_confidence": p["signals"]["founder_confidence"],
+            "shark_enthusiasm": p["signals"]["shark_enthusiasm_max"],
+            "has_deal": p["signals"]["negotiation_rounds"] > 0,
+        }
+        enriched.append(deal)
+
+    filtered = enriched
+    if industry:
+        filtered = [d for d in filtered if d["industry"] == industry]
+    if has_deal is not None:
+        filtered = [d for d in filtered if d["has_deal"] == has_deal]
+    if search:
+        search_lower = search.lower()
+        filtered = [d for d in filtered if search_lower in d["company_name"].lower()]
+    if min_revenue is not None:
+        filtered = [d for d in filtered if d["revenue"] >= min_revenue]
+    if max_revenue is not None:
+        filtered = [d for d in filtered if d["revenue"] <= max_revenue]
+
+    return {"total": len(filtered), "deals": filtered[offset:offset + limit]}

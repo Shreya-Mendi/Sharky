@@ -17,7 +17,7 @@ from src.api.schemas import (
     CompsRequest,
     CompsResponse,
 )
-from src.data.cache import get_all_pitches, get_episodes, get_episode, get_stats
+from src.data.cache import get_all_pitches, get_episodes, get_episode, get_stats, get_industries, get_deals
 from src.models.deal_predictor import (
     NUMERIC_FEATURES,
     DealPrediction,
@@ -32,7 +32,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -158,6 +158,30 @@ def list_pitches(limit: int = 50, offset: int = 0):
     return {"total": len(pitches), "pitches": pitches[offset:offset + limit]}
 
 
+@app.get("/data/industries")
+def list_industries():
+    """List all industries with aggregate stats."""
+    return get_industries()
+
+
+@app.get("/data/deals")
+def list_deals(
+    limit: int = 50,
+    offset: int = 0,
+    industry: str | None = None,
+    has_deal: bool | None = None,
+    search: str | None = None,
+    min_revenue: float | None = None,
+    max_revenue: float | None = None,
+):
+    """Filterable, paginated deal list."""
+    return get_deals(
+        limit=limit, offset=offset, industry=industry,
+        has_deal=has_deal, search=search,
+        min_revenue=min_revenue, max_revenue=max_revenue,
+    )
+
+
 @app.get("/analyze/stream")
 async def analyze_stream_endpoint(query: str, top_k: int = 5):
     """SSE streaming analysis endpoint for SharkBot."""
@@ -168,6 +192,27 @@ async def analyze_stream_endpoint(query: str, top_k: int = 5):
                 event_data = json_module.dumps(chunk)
                 yield f"data: {event_data}\n\n"
             yield "data: {\"type\": \"done\"}\n\n"
+        except Exception as e:
+            error_data = json_module.dumps({"type": "error", "data": str(e)})
+            yield f"data: {error_data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
+
+
+@app.get("/agent/research")
+async def research_stream_endpoint(query: str, depth: str = "standard"):
+    """SSE streaming research agent endpoint."""
+    from src.api.research_agent import run_research_stream
+
+    def event_generator():
+        try:
+            for chunk in run_research_stream(query, depth=depth):
+                event_data = json_module.dumps(chunk)
+                yield f"data: {event_data}\n\n"
         except Exception as e:
             error_data = json_module.dumps({"type": "error", "data": str(e)})
             yield f"data: {error_data}\n\n"
