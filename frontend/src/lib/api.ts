@@ -140,3 +140,36 @@ export async function fetchDeals(params?: {
   if (!res.ok) throw new Error("Failed to fetch deals");
   return res.json();
 }
+
+export interface ToolCallEvent {
+  type: "tool_call" | "tool_result" | "thinking" | "answer" | "error" | "done";
+  tool?: string;
+  input?: Record<string, unknown>;
+  result?: unknown;
+  content?: string;
+  data?: string;
+  status?: string;
+}
+
+export async function* streamResearch(query: string, depth: string = "standard"): AsyncGenerator<ToolCallEvent> {
+  const res = await fetch(`/api/agent/research?query=${encodeURIComponent(query)}&depth=${encodeURIComponent(depth)}`);
+  if (!res.ok) throw new Error("Research agent unavailable");
+  const reader = res.body?.getReader();
+  if (!reader) return;
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          yield JSON.parse(line.slice(6));
+        } catch {}
+      }
+    }
+  }
+}
