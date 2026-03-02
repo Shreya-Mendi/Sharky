@@ -89,3 +89,54 @@ export async function* streamAnalysis(query: string, topK = 5) {
     }
   }
 }
+
+export interface Industry {
+  industry: string;
+  deal_count: number;
+  success_rate: number;
+  avg_ask: number;
+  avg_revenue: number;
+  pitch_count: number;
+}
+
+export interface Deal {
+  episode: string;
+  company_name: string;
+  industry: string;
+  season: string;
+  revenue: number;
+  objection_count: number;
+  negotiation_rounds: number;
+  founder_confidence: number;
+  shark_enthusiasm: number;
+  has_deal: boolean;
+}
+
+export interface DealsResponse {
+  total: number;
+  deals: Deal[];
+}
+
+export async function fetchIndustries(): Promise<Industry[]> {
+  const res = await fetch("/api/data/industries");
+  if (!res.ok) throw new Error("Failed to fetch industries");
+  return res.json();
+}
+
+export async function fetchDeals(params?: {
+  limit?: number;
+  offset?: number;
+  industry?: string;
+  has_deal?: boolean;
+  search?: string;
+}): Promise<DealsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  if (params?.industry) searchParams.set("industry", params.industry);
+  if (params?.has_deal !== undefined) searchParams.set("has_deal", String(params.has_deal));
+  if (params?.search) searchParams.set("search", params.search);
+  const res = await fetch(`/api/data/deals?${searchParams}`);
+  if (!res.ok) throw new Error("Failed to fetch deals");
+  return res.json();
+}

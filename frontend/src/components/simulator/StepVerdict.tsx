@@ -84,16 +84,16 @@ export default function StepVerdict({ result, companyName, industry, loading }: 
 
       <div className="flex gap-4 justify-center pt-4">
         <Link
-          href={`/chat?context=${encodeURIComponent(`I just simulated a pitch for ${companyName} in ${industry}. Deal score was ${result.deal_score}/10. What should I know?`)}`}
+          href={`/app/agent?context=${encodeURIComponent(`I just simulated a pitch for ${companyName} in ${industry}. Deal score was ${result.deal_score}/10. What should I know?`)}`}
           className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-medium transition-all glow-blue flex items-center gap-2"
         >
-          Ask SharkBot for Advice <ArrowRight size={16} />
+          Ask Research Agent <ArrowRight size={16} />
         </Link>
         <Link
-          href="/hub"
+          href="/app/deals"
           className="border border-white/20 hover:border-white/40 text-white px-6 py-3 rounded-xl font-medium transition-all"
         >
-          See Comparable Deals
+          Explore Similar Deals
         </Link>
       </div>
     </motion.div>
