@@ -1,0 +1,6 @@
+# Railway monorepo config — defines both services from one repo.
+# In the Railway dashboard, create two services from this repo
+# and point each to the correct config below.
+#
+# Service 1 (backend): set "Config file path" to railway-backend.toml
+# Service 2 (frontend): set "Config file path" to railway-frontend.toml
