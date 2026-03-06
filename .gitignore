@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node / Next.js
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Data — large files, not for git
+data/archive.zip
+data/processed/all_pitches.json
+transcripts/
+
+# Models — binary blobs
+models/*.pkl
+models/*.joblib
+
+# Misc
+*.docx

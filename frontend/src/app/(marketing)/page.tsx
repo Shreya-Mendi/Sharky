@@ -2,372 +2,230 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import {
-  ArrowRight,
-  TrendingUp,
-  SlidersHorizontal,
-  Bot,
-  Search,
-  Cpu,
-  BarChart3,
-} from "lucide-react";
+import { ArrowRight, Database, LineChart, Radar, Sparkles } from "lucide-react";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
+
+const intelligenceLayers = [
+  {
+    layer: "1st order",
+    question: "What happened?",
+    example: "Fintech peer set with $750K revenue closed 68% of rounds when pricing stayed below 5x revenue.",
+  },
+  {
+    layer: "2nd order",
+    question: "What patterns emerge?",
+    example:
+      "Teams with lower objection pressure and higher confidence signals outperform sector averages by 1.4x.",
+  },
+  {
+    layer: "3rd order",
+    question: "What should we prioritize?",
+    example:
+      "A B2B health-tech startup shows strongest pitch-dynamic alignment with Northeast markets and enterprise partnerships — ranked with 74% confidence from corpus signals.",
+  },
+];
 
 const featureCards = [
   {
-    icon: TrendingUp,
-    color: "text-blue-400",
-    borderColor: "border-blue-500/30",
-    glowClass: "glow-blue",
-    title: "Market Analysis",
-    description:
-      "Deep-dive into industry trends, deal success rates, and valuation benchmarks across 10+ sectors.",
+    icon: Database,
+    title: "Industry Intelligence Engine",
+    description: "Map sector-level success patterns from outcome, transcript, and live market signals.",
   },
   {
-    icon: SlidersHorizontal,
-    color: "text-amber-400",
-    borderColor: "border-amber-500/30",
-    glowClass: "glow-amber",
-    title: "Deal Simulator",
-    description:
-      "Test your pitch parameters against real historical outcomes and get instant probability scores.",
+    icon: Radar,
+    title: "Startup Readiness Engine",
+    description: "Benchmark a startup against successful peers and surface funding-readiness gaps.",
   },
   {
-    icon: Bot,
-    color: "text-emerald-400",
-    borderColor: "border-emerald-500/30",
-    glowClass: "",
-    title: "Research Agent",
-    description:
-      "AI agent that autonomously researches market patterns and generates comprehensive reports.",
+    icon: LineChart,
+    title: "Market Fit Recommender",
+    description: "Rank sectors, growth avenues, and US markets with rationale and confidence.",
   },
 ];
 
-const steps = [
-  {
-    icon: Search,
-    number: "01",
-    title: "Choose Your Market",
-    description:
-      "Select from 10+ industry sectors or search for specific deal patterns.",
-  },
-  {
-    icon: Cpu,
-    number: "02",
-    title: "AI Analyzes 741+ Deals",
-    description:
-      "Our engine cross-references revenue, valuations, sentiment, and negotiation patterns.",
-  },
-  {
-    icon: BarChart3,
-    number: "03",
-    title: "Get Actionable Insights",
-    description:
-      "Receive data-backed recommendations, risk assessments, and competitive benchmarks.",
-  },
-];
-
-const seasonData = [
-  { season: "S1", height: 30, deals: 21 },
-  { season: "S2", height: 35, deals: 24 },
-  { season: "S3", height: 40, deals: 29 },
-  { season: "S4", height: 45, deals: 32 },
-  { season: "S5", height: 55, deals: 38 },
-  { season: "S6", height: 60, deals: 42 },
-  { season: "S7", height: 50, deals: 35 },
-  { season: "S8", height: 65, deals: 44 },
-  { season: "S9", height: 70, deals: 48 },
-  { season: "S10", height: 75, deals: 51 },
-  { season: "S11", height: 68, deals: 46 },
-  { season: "S12", height: 80, deals: 55 },
-  { season: "S13", height: 85, deals: 58 },
-  { season: "S14", height: 90, deals: 62 },
-  { season: "S15", height: 95, deals: 66 },
+const flowItems = [
+  "Ingest structured outcomes + negotiation transcript corpus + live US news",
+  "Build feature signals and confidence scores across sectors and startup profiles",
+  "Deliver explainable recommendations through three decision engines",
 ];
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      {/* ─── Hero ─── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
-        {/* Radial gradient background */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(59,130,246,0.15),rgba(124,58,237,0.08),transparent_70%)]" />
-
-        <motion.div
-          className="text-center max-w-4xl relative z-10"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight bg-gradient-to-r from-white via-blue-100 to-blue-300 bg-clip-text text-transparent">
-            Turn Data Into Deal-Ready Intelligence
-          </h1>
-          <p className="text-lg md:text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-            AI-powered market analysis from 741+ real venture pitches. Predict
-            outcomes, benchmark deals, and research markets — all in one
-            platform.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/app"
-              className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3.5 rounded-xl text-lg font-semibold transition-all glow-blue flex items-center justify-center gap-2"
-            >
-              Start Analyzing <ArrowRight size={20} />
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="border border-white/20 hover:border-white/40 text-white px-8 py-3.5 rounded-xl text-lg font-semibold transition-all hover:bg-white/5"
-            >
-              See How It Works
-            </Link>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ─── Stats Strip ─── */}
-      <section id="stats" className="py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="max-w-5xl mx-auto px-6"
-        >
-          <div className="glass py-10 px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white">
-                  <AnimatedCounter target={741} suffix="+" />
-                </span>
-                <span className="text-sm text-slate-500 mt-2">
-                  Deals Analyzed
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white">
-                  <AnimatedCounter target={15} />
-                </span>
-                <span className="text-sm text-slate-500 mt-2">
-                  Seasons of Data
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white">
-                  <AnimatedCounter target={2} prefix="$" suffix=".4B" />
-                </span>
-                <span className="text-sm text-slate-500 mt-2">
-                  Deal Value Tracked
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white">
-                  <AnimatedCounter target={292} />
-                </span>
-                <span className="text-sm text-slate-500 mt-2">
-                  Episodes Parsed
-                </span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ─── Three-Feature Showcase ─── */}
-      <section id="features" className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-bold text-center mb-16"
+    <div className="mesh-bg min-h-screen">
+      <section className="px-6 pt-28 pb-20">
+        <div className="max-w-6xl mx-auto">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.03] px-4 py-1 text-xs tracking-[0.2em] uppercase text-[var(--text-muted)]"
           >
-            Everything You Need for Deal Intelligence
-          </motion.h2>
+            <Sparkles size={14} className="text-[var(--accent-blue)]" />
+            VC Decision Intelligence
+          </motion.p>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {featureCards.map((card, i) => (
-              <motion.div
-                key={card.title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.6 }}
-                className={`glass glass-hover p-8 ${card.borderColor} border cursor-default`}
-              >
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${
-                    card.color === "text-blue-400"
-                      ? "bg-blue-500/10"
-                      : card.color === "text-amber-400"
-                        ? "bg-amber-500/10"
-                        : "bg-emerald-500/10"
-                  }`}
-                >
-                  <card.icon className={card.color} size={24} />
-                </div>
-                <h3 className="text-xl font-bold mb-3">{card.title}</h3>
-                <p className="text-slate-400 leading-relaxed">
-                  {card.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── How It Works ─── */}
-      <section id="how-it-works" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-bold text-center mb-16"
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.05 }}
+            className="mt-6 max-w-4xl text-5xl md:text-7xl font-semibold leading-[1.02] tracking-tight"
           >
-            Three Steps to Smarter Decisions
-          </motion.h2>
+            Move from startup guesswork to engine-driven market decisions.
+          </motion.h1>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step, i) => (
-              <motion.div
-                key={step.number}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.6 }}
-                className="relative text-center md:text-left"
-              >
-                <div className="flex flex-col items-center md:items-start">
-                  <span className="text-5xl font-black text-white/5 mb-4">
-                    {step.number}
-                  </span>
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4">
-                    <step.icon className="text-blue-400" size={24} />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-
-                {/* Connector line between steps (hidden on last) */}
-                {i < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-16 -right-4 w-8">
-                    <div className="border-t border-dashed border-white/10 w-full" />
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Dashboard Preview ─── */}
-      <section className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-bold text-center mb-16"
+          <motion.p
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="mt-6 max-w-2xl text-lg text-[var(--text-muted)] leading-relaxed"
           >
-            Your Command Center for Deal Intelligence
-          </motion.h2>
+            DealScope turns sector patterns, startup readiness, and market expansion planning into one product workflow for investors and founders.
+          </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="max-w-5xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.15 }}
+            className="mt-10 flex flex-col sm:flex-row gap-4"
           >
-            <div className="glass p-8 md:p-10">
-              {/* KPI Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-white">741</p>
-                  <p className="text-xs text-slate-500 mt-1">Deals</p>
-                </div>
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-emerald-400">68%</p>
-                  <p className="text-xs text-slate-500 mt-1">Success</p>
-                </div>
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-blue-400">$2.4B</p>
-                  <p className="text-xs text-slate-500 mt-1">Tracked</p>
-                </div>
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-amber-400">15</p>
-                  <p className="text-xs text-slate-500 mt-1">Seasons</p>
-                </div>
-              </div>
+            <Link
+              href="/app"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.08] px-7 py-3 font-semibold hover:bg-white/[0.14] transition-colors"
+            >
+              Launch DealScope <ArrowRight size={17} />
+            </Link>
+            <a
+              href="#layers"
+              className="inline-flex items-center justify-center rounded-xl border border-white/15 px-7 py-3 font-semibold text-[var(--text-muted)] hover:text-white hover:border-white/30 transition-colors"
+            >
+              View Intelligence Layers
+            </a>
+          </motion.div>
 
-              {/* Chart Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    Deals Closed by Season
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Historical deal volume across all 15 seasons
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                  <span className="text-xs text-slate-500">Deals Closed</span>
-                </div>
-              </div>
-
-              {/* Bar Chart Mockup */}
-              <div className="bg-white/[0.02] rounded-xl p-6 border border-white/[0.04]">
-                <div className="flex items-end justify-between gap-2 h-48">
-                  {seasonData.map((s) => (
-                    <div
-                      key={s.season}
-                      className="flex flex-col items-center flex-1 gap-1"
-                    >
-                      <span className="text-[10px] text-slate-500">
-                        {s.deals}
-                      </span>
-                      <div
-                        className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-blue-400 transition-all"
-                        style={{ height: `${s.height}%` }}
-                      />
-                      <span className="text-[10px] text-slate-600 mt-1">
-                        {s.season}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4"
+          >
+            <div className="rounded-xl border border-white/10 bg-[var(--bg-surface)] p-5">
+              <p className="text-3xl font-semibold">
+                <AnimatedCounter target={741} suffix="+" />
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Pitches Parsed</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[var(--bg-surface)] p-5">
+              <p className="text-3xl font-semibold">
+                <AnimatedCounter target={15} />
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Seasons Covered</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[var(--bg-surface)] p-5">
+              <p className="text-3xl font-semibold">
+                <AnimatedCounter target={1481} />
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Labeled Records</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[var(--bg-surface)] p-5">
+              <p className="text-3xl font-semibold">3 Engines</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Industry, Readiness, Market Fit</p>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ─── CTA Footer ─── */}
-      <section className="py-32 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto"
-        >
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to make data-driven decisions?
-          </h2>
-          <Link
-            href="/app"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-xl text-lg font-semibold transition-all glow-blue"
+      <section id="layers" className="px-6 py-16">
+        <div className="max-w-6xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-3xl md:text-4xl font-semibold tracking-tight"
           >
-            Launch DealScope <ArrowRight size={20} />
-          </Link>
-        </motion.div>
+            Intelligence Layers
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+            className="mt-3 text-[var(--text-muted)] max-w-3xl"
+          >
+            The product flow is strongest when each layer is explicit: event recall, pattern recognition, and forward prediction.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.08 }}
+            className="mt-8 overflow-x-auto rounded-2xl border border-white/15 bg-[var(--bg-panel)]"
+          >
+            <table className="matrix-table min-w-full text-left">
+              <thead>
+                <tr className="bg-black/25">
+                  <th className="px-6 py-4 text-sm font-semibold text-[var(--text-muted)]">Layer</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-[var(--text-muted)]">What it answers</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-[var(--text-muted)]">Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                {intelligenceLayers.map((row) => (
+                  <tr key={row.layer}>
+                    <td className="px-6 py-6 text-lg font-semibold">{row.layer}</td>
+                    <td className="px-6 py-6 text-lg text-[var(--text-muted)]">{row.question}</td>
+                    <td className="px-6 py-6 text-lg text-[var(--text-muted)]">{row.example}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </motion.div>
+        </div>
+      </section>
+
+      <section id="features" className="px-6 py-16">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-5">
+          {featureCards.map((card, i) => (
+            <motion.article
+              key={card.title}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: i * 0.06 }}
+              className="rounded-2xl border border-white/12 bg-[var(--bg-surface)] p-6"
+            >
+              <card.icon size={20} className="text-[var(--accent-blue)]" />
+              <h3 className="mt-4 text-xl font-semibold">{card.title}</h3>
+              <p className="mt-3 text-[var(--text-muted)] leading-relaxed">{card.description}</p>
+            </motion.article>
+          ))}
+        </div>
+      </section>
+
+      <section id="how-it-works" className="px-6 pt-4 pb-24">
+        <div className="max-w-6xl mx-auto rounded-2xl border border-white/12 bg-[var(--bg-surface)] p-8 md:p-10">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Product Flow</h2>
+          <div className="mt-6 grid md:grid-cols-3 gap-4">
+            {flowItems.map((item, idx) => (
+              <div key={item} className="rounded-xl border border-white/10 bg-black/20 p-5">
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)]">Step {idx + 1}</p>
+                <p className="mt-2 text-base leading-relaxed">{item}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+            <p className="text-[var(--text-muted)]">
+              We position negotiation transcripts as a novel signal layer while keeping the product centered on practical VC and founder decisions.
+            </p>
+            <Link
+              href="/app"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.08] px-7 py-3 font-semibold hover:bg-white/[0.14] transition-colors"
+            >
+              Open Product <ArrowRight size={17} />
+            </Link>
+          </div>
+        </div>
       </section>
     </div>
   );

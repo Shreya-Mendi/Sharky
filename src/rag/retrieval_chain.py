@@ -1,7 +1,9 @@
 """retrieval_chain.py — RAG pipeline over Shark Tank pitch data.
 
-Retrieves relevant pitch segments from Pinecone, augments with
-structured data from PostgreSQL, and synthesises analysis via Claude.
+Retrieves relevant pitch segments using local sentence-transformer embeddings
+(all-MiniLM-L6-v2) with cross-encoder reranking, then synthesises analysis
+via Claude. No external vector database required — the corpus is small enough
+(~741 pitches) to retrieve in-process.
 """
 
 from __future__ import annotations
@@ -10,13 +12,16 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-SYSTEM_PROMPT = """You are a Shark Tank market analyst with deep expertise in startup evaluation,
-deal negotiation patterns, and investor psychology. You have access to a comprehensive
-database of every Shark Tank pitch, including transcripts, deal outcomes, and market data.
+from src.data.cache import get_all_pitches, classify_industry
+from src.nlp.hybrid_ai import semantic_retrieve
+
+SYSTEM_PROMPT = """You are a venture pitch analyst with deep expertise in startup evaluation,
+deal negotiation patterns, and investor psychology. You have access to a database of
+real pitch transcripts, deal outcomes, and market data from a multi-season pitch corpus.
 
 When answering questions:
 - Ground your analysis in specific data from retrieved pitches
-- Cite episode numbers and company names
+- Cite episode codes and company names
 - Provide quantitative evidence (deal amounts, success rates, margins)
 - Identify patterns across multiple pitches when relevant
 - Give actionable insights for founders or investors
@@ -41,6 +46,59 @@ class AnalysisResult:
     query: str
 
 
+def _build_corpus_docs() -> list[dict]:
+    """Build flat document list from cached pitches for embedding retrieval."""
+    pitches = get_all_pitches()
+    docs = []
+    for pitch in pitches:
+        segs = pitch.get("segments", {})
+        for seg_name, blocks in segs.items():
+            if not isinstance(blocks, list) or not blocks:
+                continue
+            text = " ".join(blocks)
+            if len(text.strip()) < 30:
+                continue
+            docs.append({
+                "text": text[:1500],
+                "episode": pitch.get("episode", ""),
+                "company_name": pitch.get("entrepreneur_name", "Unknown"),
+                "segment_type": seg_name,
+                "industry": classify_industry(pitch),
+            })
+    return docs
+
+
+def retrieve_context(
+    query: str,
+    top_k: int = 5,
+    filters: Optional[dict] = None,
+) -> list[dict]:
+    """Retrieve relevant pitch segments using local embedding + reranking.
+
+    Uses sentence-transformers/all-MiniLM-L6-v2 for dense retrieval and
+    cross-encoder/ms-marco-MiniLM-L-6-v2 for reranking when available.
+    Falls back to lexical overlap scoring if no GPU/models present.
+    """
+    docs = _build_corpus_docs()
+
+    if filters and filters.get("industry"):
+        target = filters["industry"].lower()
+        docs = [d for d in docs if target in d.get("industry", "").lower()]
+
+    hits = semantic_retrieve(query, docs, text_key="text", top_k=top_k)
+    results = []
+    for idx, score in hits:
+        doc = docs[idx]
+        results.append({
+            "text": doc["text"],
+            "episode": doc["episode"],
+            "company_name": doc["company_name"],
+            "segment_type": doc["segment_type"],
+            "score": round(float(score), 4),
+        })
+    return results
+
+
 def build_analysis_prompt(query: str, context_docs: list[dict]) -> str:
     """Build the full prompt with system prompt, context, and query."""
     context_parts: list[str] = []
@@ -49,9 +107,7 @@ def build_analysis_prompt(query: str, context_docs: list[dict]) -> str:
         company = doc.get("company_name", "Unknown")
         segment = doc.get("segment_type", "")
         text = doc.get("text", "")
-        context_parts.append(
-            f"[{episode} - {company} ({segment})]\n{text}"
-        )
+        context_parts.append(f"[{episode} - {company} ({segment})]\n{text}")
 
     context_str = "\n\n".join(context_parts) if context_parts else "No relevant context found."
 
@@ -71,83 +127,26 @@ Answer the user's query using the retrieved context above. Cite specific episode
 If the context doesn't contain relevant information, say so and provide general insights."""
 
 
-def retrieve_context(
-    query: str,
-    top_k: int = 5,
-    filters: Optional[dict] = None,
-) -> list[dict]:
-    """Retrieve relevant pitch segments from Pinecone.
-
-    Requires OPENAI_API_KEY and PINECONE_API_KEY in environment.
-    """
-    from openai import OpenAI
-    from pinecone import Pinecone
-
-    # Embed query
-    openai_client = OpenAI()
-    response = openai_client.embeddings.create(
-        model="text-embedding-3-large",
-        input=[query],
-    )
-    query_embedding = response.data[0].embedding
-
-    # Search Pinecone
-    pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
-    index_name = os.environ.get("PINECONE_INDEX_NAME", "shark-tank-engine")
-    index = pc.Index(index_name)
-
-    query_params = {
-        "vector": query_embedding,
-        "top_k": top_k,
-        "include_metadata": True,
-    }
-    if filters:
-        query_params["filter"] = filters
-
-    results = index.query(**query_params)
-
-    context_docs = []
-    for match in results.get("matches", []):
-        metadata = match.get("metadata", {})
-        context_docs.append({
-            "text": metadata.get("text", ""),
-            "episode": metadata.get("episode", ""),
-            "company_name": metadata.get("company_name", ""),
-            "segment_type": metadata.get("segment_type", ""),
-            "score": match.get("score", 0.0),
-        })
-
-    return context_docs
-
-
 def analyze(
     query: str,
     top_k: int = 5,
     filters: Optional[dict] = None,
 ) -> AnalysisResult:
-    """Full RAG pipeline: retrieve -> prompt -> synthesise.
-
-    Requires ANTHROPIC_API_KEY, OPENAI_API_KEY, and PINECONE_API_KEY.
-    """
+    """Full RAG pipeline: retrieve -> prompt -> synthesise via Claude."""
     import anthropic
 
-    # Retrieve context
     context_docs = retrieve_context(query, top_k=top_k, filters=filters)
-
-    # Build prompt
     prompt = build_analysis_prompt(query, context_docs)
 
-    # Call Claude
-    client = anthropic.Anthropic()
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
     )
 
     answer = message.content[0].text
-
-    # Build citations
     sources = [
         SourceCitation(
             episode=doc.get("episode", ""),
@@ -157,7 +156,6 @@ def analyze(
         )
         for doc in context_docs
     ]
-
     return AnalysisResult(answer=answer, sources=sources, query=query)
 
 
@@ -172,8 +170,6 @@ def analyze_stream(
     context_docs = retrieve_context(query, top_k=top_k, filters=filters)
     prompt = build_analysis_prompt(query, context_docs)
 
-    client = anthropic.Anthropic()
-
     sources = [
         {
             "episode": doc.get("episode", ""),
@@ -183,11 +179,12 @@ def analyze_stream(
         }
         for doc in context_docs
     ]
-
     yield {"type": "sources", "data": sources}
 
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    client = anthropic.Anthropic(api_key=api_key)
     with client.messages.stream(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
     ) as stream:

@@ -7,20 +7,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   TrendingUp,
-  SlidersHorizontal,
+  ClipboardCheck,
+  Globe2,
   Bot,
-  Search,
+  Settings,
   ChevronLeft,
   ChevronRight,
-  Zap,
+  Compass,
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/app", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/app/market", icon: TrendingUp, label: "Market Analysis" },
-  { href: "/app/simulator", icon: SlidersHorizontal, label: "Deal Simulator" },
-  { href: "/app/agent", icon: Bot, label: "Research Agent" },
-  { href: "/app/deals", icon: Search, label: "Deal Explorer" },
+  { href: "/app", icon: LayoutDashboard, label: "Engine Hub" },
+  { href: "/app/market", icon: TrendingUp, label: "Industry Intelligence" },
+  { href: "/app/simulator", icon: ClipboardCheck, label: "Startup Readiness" },
+  { href: "/app/deals", icon: Globe2, label: "Market Fit Recommender" },
+  { href: "/app/agent", icon: Bot, label: "Research Copilot" },
+  { href: "/app/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function Sidebar() {
@@ -34,14 +36,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sidebar fixed left-0 top-0 h-screen z-40 flex flex-col transition-all duration-300 ${
+      className={`sidebar fixed left-0 top-0 h-screen z-40 hidden md:flex flex-col transition-all duration-300 ${
         collapsed ? "w-16" : "w-60"
       }`}
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-white/5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-          <Zap size={18} className="text-white" />
+        <div className="w-8 h-8 rounded-lg border border-white/20 bg-white/5 flex items-center justify-center flex-shrink-0">
+          <Compass size={16} className="text-[var(--accent-blue)]" />
         </div>
         <AnimatePresence>
           {!collapsed && (
@@ -49,7 +51,7 @@ export default function Sidebar() {
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: "auto" }}
               exit={{ opacity: 0, width: 0 }}
-              className="font-bold text-lg whitespace-nowrap overflow-hidden"
+              className="font-semibold tracking-wide text-lg whitespace-nowrap overflow-hidden"
             >
               DealScope
             </motion.span>
